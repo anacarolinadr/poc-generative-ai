@@ -1,0 +1,13 @@
+# Dependências da POC Qwen2.5-VL
+#
+# Caminho A — transformers (local ou Colab):
+#   pip install -r requirements/requirements-local.txt
+#
+# Caminho B — vLLM + guided_json (Linux/Colab com GPU):
+#   pip install -r requirements/requirements-vllm.txt
+#
+# Poppler (para PDFs):
+#   Linux:  sudo apt-get install -y poppler-utils
+#   Windows: instale Poppler e adicione ao PATH
+
+-r requirements-local.txt

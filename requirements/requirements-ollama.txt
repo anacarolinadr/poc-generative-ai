@@ -1,0 +1,14 @@
+# Ollama local (extract_ollama.py, run_all_ollama.py)
+#
+# Pré-requisitos:
+#   1. Instale o app Ollama: https://ollama.com
+#   2. Baixe o modelo de visão:
+#        ollama pull qwen2.5vl:3b    # ~3 GB, recomendado
+#        ollama pull qwen2.5vl:7b    # ~6 GB, mais preciso
+#   3. Para PDFs no Windows: instale Poppler e adicione ao PATH
+#      (https://github.com/oschwartz10612/poppler-windows/releases)
+#
+ollama
+pillow
+pdf2image
+tqdm

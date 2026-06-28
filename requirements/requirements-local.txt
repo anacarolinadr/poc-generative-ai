@@ -1,0 +1,14 @@
+# Transformers + GPU local ou Colab (extract_transformers.py, run_all.py)
+torch>=2.2
+torchvision
+transformers>=4.49.0
+accelerate
+bitsandbytes
+qwen-vl-utils
+pillow
+pdf2image
+requests
+tqdm
+
+# AWQ (opcional, para carregar Qwen2.5-VL-7B-Instruct-AWQ no Colab)
+autoawq

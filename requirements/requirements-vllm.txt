@@ -1,0 +1,6 @@
+# Servidor vLLM (Linux/Colab) + cliente (extract_vllm_single_step.py)
+vllm>0.7.2
+qwen-vl-utils
+pdf2image
+pillow
+requests
