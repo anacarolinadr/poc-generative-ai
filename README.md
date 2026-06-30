@@ -146,7 +146,7 @@ Cada backend implementa as mesmas três funções:
 | Preset   | Modelo                     | Quantização        | Uso típico                   |
 | -------- | -------------------------- | ------------------ | ---------------------------- |
 | `lower`  | Qwen2.5-VL-3B-Instruct     | 4-bit (~6 GB VRAM) | GPU consumer / máquina local |
-| `higher` | Qwen2.5-VL-7B-Instruct-AWQ | AWQ                | Colab T4 16 GB               |
+| `higher` | Qwen2.5-VL-7B-Instruct-AWQ | AWQ                | GPU consumer / L4 (~6–8 GB); cabe no Colab T4 16 GB |
 
 
 ---
@@ -355,14 +355,24 @@ python extract_vllm_single_step.py fatura --out outro/caminho.json   # caminho a
 
 | Configuração                       | VRAM aproximada     | Onde usar                   |
 | ---------------------------------- | ------------------- | --------------------------- |
+| Qwen2.5-VL-3B-Instruct (4-bit)     | ~6 GB               | Máquina local / GPU consumer |
+| Qwen2.5-VL-7B via Ollama (quant. interna)† | ~6 GB        | Máquina local (CPU ou GPU) — **usada na POC** |
+| Qwen2.5-VL-7B-Instruct-AWQ (int4)  | ~6–8 GB             | GPU consumer / nuvem barata (L4) |
 | Qwen2.5-VL-7B-Instruct (bf16)      | ~16–18 GB           | GPU única (RTX 4090 / A10)  |
-| Qwen2.5-VL-7B-Instruct-AWQ (int4)  | ~6–8 GB             | GPU consumer / cloud barato |
-| Qwen2.5-VL-3B-Instruct (4-bit)     | ~6 GB               | Máquina local               |
-| Qwen2.5-VL-72B-Instruct (bf16)     | ~145 GB (multi-GPU) | Cluster / cloud             |
 | Qwen2.5-VL-72B-Instruct-AWQ (int4) | ~40–48 GB           | 1× A100/H100 80 GB          |
+| Qwen2.5-VL-72B-Instruct (bf16)     | ~145 GB (multi-GPU) | Cluster / cloud             |
 
+† Variante efetivamente testada na POC (`qwen2.5vl:7b` via Ollama). Guided decoding via parâmetro `format` com JSON Schema.
 
-Custo de nuvem (referência, varia por provedor/região): GPU H100 a partir de ~US$2,50/h on-demand, A100 80 GB a partir de ~US$1,30/h em provedores como RunPod 
+Custo de nuvem (referência, varia por provedor/região): GPU H100 a partir de ~US$2,50/h on-demand, A100 80 GB a partir de ~US$1,30/h em provedores como RunPod.
+
+**Custo por página (auto-hospedado, produção):** tomando uma GPU NVIDIA L4 a ~US$1,00/h *on-demand* e supondo, de forma conservadora, um *throughput* amortizado de ~5 s/página com *continuous batching* do vLLM (~720 páginas/h):
+
+```
+C_página ≈ US$1,00/h ÷ 720 pág./h ≈ US$0,0014/página (≈ US$1,40 por 1.000 páginas)
+```
+
+Esse valor é tipicamente **inferior** ao custo por página de APIs multimodais de fronteira (que cobram por *tokens* de entrada/saída em cada chamada e seriam pagas duas vezes no pipeline atual de 2 etapas). A vantagem do auto-hospedado cresce com a escala, dado o custo marginal próximo de zero.
 
 ---
 

@@ -3,7 +3,7 @@ Configuração central da POC Qwen2.5-VL.
 
 Presets:
   - lower:  3B em 4-bit (~6 GB VRAM)
-  - higher: 7B-AWQ ou 7B bf16 (T4 16 GB)
+  - higher: 7B-AWQ (~6–8 GB; GPU consumer / L4 / Colab T4 16 GB)
 """
 
 from __future__ import annotations
