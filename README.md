@@ -116,7 +116,7 @@ flowchart LR
 | Arquivo                                                      | Responsabilidade                                                                                                                                                |
 | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `[config.py](config.py)`                                     | Paths (`docs/`, `outputs/`), presets de hardware (`lower`, `higher`), `RuntimeConfig` e argumentos CLI comuns (`--preset`, `--model`, `--quant`, `--max-pages`) |
-| `[schemas.py](schemas.py)`                                   | JSON Schemas de CNH e Fatura de energia — usados para guided decoding e instrução ao modelo                                                                     |
+| `[schemas.py](schemas.py)`                                   | JSON Schemas (CNH e Fatura), prompts de extração (`FATURA_EXTRACTION_PROMPT`, `LONGDOC_PAGE_PROMPT`) e `normalize_longdoc_page()`                               |
 | `[extract_ollama.py](extract_ollama.py)`                     | Extração via Ollama (`qwen2.5vl:3b` ou `7b`); `format` do schema garante JSON válido                                                                            |
 | `[extract_transformers.py](extract_transformers.py)`         | Extração via Hugging Face `transformers`; suporta 4-bit (bitsandbytes) e AWQ                                                                                    |
 | `[extract_vllm_single_step.py](extract_vllm_single_step.py)` | Cliente HTTP do servidor vLLM; usa `guided_json` para CNH e fatura                                                                                              |
@@ -383,6 +383,7 @@ Esse valor é tipicamente **inferior** ao custo por página de APIs multimodais 
 - Documentos muito degradados ou manuscritos tendem a ter queda de acurácia em todos os VLMs atuais 
 - Para documentos *muito* longos (>30–40 páginas), processar página a página (como em `extract_long_document`) é mais robusto que mandar o PDF inteiro, mas custa mais chamadas — trade-off latência vs. completude.
 - No backend **transformers**, o JSON é guiado apenas via prompt (sem guided decoding nativo); Ollama e vLLM garantem JSON válido via schema.
+- A saída do longdoc é pós-processada por `normalize_longdoc_page()` em `schemas.py` para remover code fences residuais e converter `\n` literais — aplicável nos três backends.
 
 ---
 

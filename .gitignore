@@ -5,7 +5,6 @@ __pycache__/
 venv/
 .env
 
-outputs/
 .ipynb_checkpoints/
 
 # caches de modelos Hugging Face / torch

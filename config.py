@@ -36,6 +36,9 @@ DEFAULT_OUTPUTS: dict[str, Path] = {
 
 PATCH_SIZE = 28
 
+LONGDOC_MAX_NEW_TOKENS = 8192
+LONGDOC_NUM_CTX = 32768
+
 
 @dataclass(frozen=True)
 class RuntimeConfig:
@@ -45,6 +48,7 @@ class RuntimeConfig:
     max_pixels: int = 768 * PATCH_SIZE * PATCH_SIZE
     device_map: str = "auto"
     max_pages: int | None = None
+    page_range: tuple[int, int] | None = None
     pdf_dpi: int = 150
 
     @property
@@ -66,6 +70,21 @@ PRESETS: dict[str, RuntimeConfig] = {
         pdf_dpi=150,
     ),
 }
+
+
+def parse_page_range(value: str) -> tuple[int, int]:
+    """Converte '5' ou '3-7' em (first, last) 1-indexed."""
+    value = value.strip()
+    if "-" in value:
+        first_str, last_str = value.split("-", 1)
+        first, last = int(first_str.strip()), int(last_str.strip())
+    else:
+        first = last = int(value)
+    if first < 1 or last < 1:
+        raise ValueError(f"Páginas devem ser >= 1, recebido: {value!r}")
+    if first > last:
+        raise ValueError(f"Página inicial ({first}) não pode ser maior que a final ({last})")
+    return first, last
 
 
 def resolve_doc(caso: str, arquivo: str | Path | None = None) -> Path:
@@ -110,6 +129,11 @@ def add_runtime_args(parser: argparse.ArgumentParser) -> None:
         help="Limita páginas processadas em longdoc (útil para testes rápidos)",
     )
     parser.add_argument(
+        "--pages",
+        default=None,
+        help="Página(s) do PDF a processar. Ex: '5' ou '3-7'",
+    )
+    parser.add_argument(
         "--pdf-dpi",
         type=int,
         default=None,
@@ -130,6 +154,9 @@ def runtime_from_args(args: argparse.Namespace) -> RuntimeConfig:
     device_map = args.device_map or base.device_map
     max_pages = args.max_pages if args.max_pages is not None else base.max_pages
     pdf_dpi = args.pdf_dpi if args.pdf_dpi is not None else base.pdf_dpi
+    page_range = base.page_range
+    if getattr(args, "pages", None):
+        page_range = parse_page_range(args.pages)
 
     return RuntimeConfig(
         model_id=model_id,
@@ -138,5 +165,6 @@ def runtime_from_args(args: argparse.Namespace) -> RuntimeConfig:
         max_pixels=max_pixels,
         device_map=device_map,
         max_pages=max_pages,
+        page_range=page_range,
         pdf_dpi=pdf_dpi,
     )

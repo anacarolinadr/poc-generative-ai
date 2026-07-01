@@ -1,0 +1,90 @@
+{
+  "titular": "MARIA JOSÉ DA SILVA",
+  "numero_cliente": "1234567890",
+  "mes_referencia": "JUN/2014",
+  "data_vencimento": "10/07/2014",
+  "valor_total": "63,72",
+  "consumo_kwh": "160.0000000",
+  "historico_consumo": [
+    {
+      "mes": "JUN'14",
+      "consumo_kwh": "160"
+    },
+    {
+      "mes": "MAI'14",
+      "consumo_kwh": "185"
+    },
+    {
+      "mes": "ABR'14",
+      "consumo_kwh": "189"
+    },
+    {
+      "mes": "MAR'14",
+      "consumo_kwh": "152"
+    },
+    {
+      "mes": "FEV'14",
+      "consumo_kwh": "157"
+    },
+    {
+      "mes": "JAN'14",
+      "consumo_kwh": "151"
+    },
+    {
+      "mes": "DEZ'13",
+      "consumo_kwh": "183"
+    },
+    {
+      "mes": "NOV'13",
+      "consumo_kwh": "165"
+    },
+    {
+      "mes": "OUT'13",
+      "consumo_kwh": "174"
+    },
+    {
+      "mes": "SET'13",
+      "consumo_kwh": "182"
+    },
+    {
+      "mes": "AGO'13",
+      "consumo_kwh": "165"
+    },
+    {
+      "mes": "JUL'13",
+      "consumo_kwh": "156"
+    }
+  ],
+  "componentes_cobranca": [
+    {
+      "nome": "GERAÇÃO DE ENERGIA",
+      "valor": "20,38"
+    },
+    {
+      "nome": "TRANSMISSÃO",
+      "valor": "1,72"
+    },
+    {
+      "nome": "DISTRIBUIÇÃO (Celpe)",
+      "valor": "19,07"
+    },
+    {
+      "nome": "ENCARGOS SETORIAIS",
+      "valor": "2,20"
+    }
+  ],
+  "tributos": [
+    {
+      "nome": "ICMS",
+      "valor": "10,83"
+    },
+    {
+      "nome": "PIS",
+      "valor": "0,93"
+    },
+    {
+      "nome": "COFINS",
+      "valor": "2,89"
+    }
+  ]
+}

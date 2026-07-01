@@ -24,13 +24,14 @@ from transformers import AutoProcessor, Qwen2_5_VLForConditionalGeneration
 from config import (
     DEFAULT_DOCS,
     DEFAULT_OUTPUTS,
+    LONGDOC_MAX_NEW_TOKENS,
     OUTPUTS_DIR,
     RuntimeConfig,
     add_runtime_args,
     resolve_doc,
     runtime_from_args,
 )
-from schemas import CNH_SCHEMA, FATURA_ENERGIA_SCHEMA, FATURA_EXTRACTION_PROMPT
+from schemas import CNH_SCHEMA, FATURA_ENERGIA_SCHEMA, FATURA_EXTRACTION_PROMPT, LONGDOC_PAGE_PROMPT, normalize_longdoc_page
 
 try:
     from qwen_vl_utils import process_vision_info
@@ -129,8 +130,6 @@ def _run_inference(
     max_new_tokens: int = 2048,
     desc: str | None = "Inferência",
 ) -> str:
-    # schema/desc mantidos p/ paridade com extract_ollama.py; no transformers o
-    # JSON é guiado apenas via prompt (sem guided decoding nativo).
     del schema, desc
 
     model, processor = load_model()
@@ -195,22 +194,8 @@ def extract_cnh(image_path: str | Path) -> dict:
 
 def extract_long_document(pdf_path: str | Path) -> str:
     pages = load_pages(pdf_path)
-    prompt_pagina = (
-        "Transcreva o conteúdo textual desta página mantendo a organização "
-        "do layout (títulos, parágrafos e, principalmente, tabelas) em "
-        "formato Markdown. Tabelas devem virar tabelas Markdown. "
-        "Se houver gráficos, diagramas ou imagens não-textuais, descreva "
-        "objetivamente o que eles mostram em uma seção "
-        "'> **Figura:** ...' imediatamente após o ponto onde aparecem.\n\n"
-        "IMPORTANTE — distinção de rodapés:\n"
-        "- Referências bibliográficas (citadas como [N] no corpo do texto) "
-        "devem ser mantidas como [N] onde aparecem no texto.\n"
-        "- Notas de rodapé de produto/interface (que aparecem abaixo de uma "
-        "linha horizontal no final da página e NÃO são citadas no texto "
-        "corrido) devem ser transcritas numa seção separada ao final, "
-        "precedida por '---\\n> **Nota de rodapé:**', sem reutilizar a "
-        "numeração [N] das referências bibliográficas."
-    )
+    config = get_runtime()
+    page_offset = (config.page_range[0] - 1) if config.page_range else 0
 
     markdown_partes = []
     total = len(pages)
@@ -223,13 +208,16 @@ def extract_long_document(pdf_path: str | Path) -> str:
         ),
         start=1,
     ):
-        texto_pagina = _run_inference(
-            page,
-            prompt_pagina,
-            max_new_tokens=2048,
-            desc=f"Página {i}/{total}",
+        pdf_page = page_offset + i
+        texto_pagina = normalize_longdoc_page(
+            _run_inference(
+                page,
+                LONGDOC_PAGE_PROMPT,
+                max_new_tokens=LONGDOC_MAX_NEW_TOKENS,
+                desc=f"Página {pdf_page} ({i}/{total})",
+            )
         )
-        markdown_partes.append(f"<!-- página {i} -->\n{texto_pagina}")
+        markdown_partes.append(f"<!-- página {pdf_page} -->\n{texto_pagina}")
 
     return "\n\n".join(markdown_partes)
 

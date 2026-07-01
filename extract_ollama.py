@@ -25,6 +25,8 @@ from tqdm import tqdm
 from config import (
     DEFAULT_DOCS,
     DEFAULT_OUTPUTS,
+    LONGDOC_MAX_NEW_TOKENS,
+    LONGDOC_NUM_CTX,
     OUTPUTS_DIR,
     MODEL_3B,
     MODEL_7B,
@@ -34,7 +36,7 @@ from config import (
     resolve_doc,
     runtime_from_args,
 )
-from schemas import CNH_SCHEMA, FATURA_ENERGIA_SCHEMA, FATURA_EXTRACTION_PROMPT
+from schemas import CNH_SCHEMA, FATURA_ENERGIA_SCHEMA, FATURA_EXTRACTION_PROMPT, LONGDOC_PAGE_PROMPT, normalize_longdoc_page
 
 OLLAMA_MODEL_3B = "qwen2.5vl:3b"
 OLLAMA_MODEL_7B = "qwen2.5vl:7b"
@@ -93,7 +95,10 @@ def load_pages(path: str | Path) -> list[bytes]:
 
         if _show_progress:
             tqdm.write(f"Convertendo PDF: {path.name}...")
-        pages = convert_from_path(str(path), dpi=config.pdf_dpi)
+        kwargs: dict = {"dpi": config.pdf_dpi}
+        if config.page_range:
+            kwargs["first_page"], kwargs["last_page"] = config.page_range
+        pages = convert_from_path(str(path), **kwargs)
         if config.max_pages is not None:
             pages = pages[: config.max_pages]
         iterator = tqdm(
@@ -114,14 +119,19 @@ def _run_inference(
     *,
     schema: dict | None = None,
     max_new_tokens: int = 2048,
+    num_ctx: int | None = None,
     desc: str | None = "Inferência",
 ) -> str:
+    options: dict = {"temperature": 0, "num_predict": max_new_tokens}
+    if num_ctx is not None:
+        options["num_ctx"] = num_ctx
+
     kwargs: dict = {
         "model": get_model_id(),
         "messages": [
             {"role": "user", "content": prompt, "images": [image_bytes]},
         ],
-        "options": {"temperature": 0, "num_predict": max_new_tokens},
+        "options": options,
     }
     if schema is not None:
         kwargs["format"] = schema
@@ -182,22 +192,8 @@ def extract_cnh(image_path: str | Path) -> dict:
 
 def extract_long_document(pdf_path: str | Path) -> str:
     pages = load_pages(pdf_path)
-    prompt_pagina = (
-        "Transcreva o conteúdo textual desta página mantendo a organização "
-        "do layout (títulos, parágrafos e, principalmente, tabelas) em "
-        "formato Markdown. Tabelas devem virar tabelas Markdown. "
-        "Se houver gráficos, diagramas ou imagens não-textuais, descreva "
-        "objetivamente o que eles mostram em uma seção "
-        "'> **Figura:** ...' imediatamente após o ponto onde aparecem.\n\n"
-        "IMPORTANTE — distinção de rodapés:\n"
-        "- Referências bibliográficas (citadas como [N] no corpo do texto) "
-        "devem ser mantidas como [N] onde aparecem no texto.\n"
-        "- Notas de rodapé de produto/interface (que aparecem abaixo de uma "
-        "linha horizontal no final da página e NÃO são citadas no texto "
-        "corrido) devem ser transcritas numa seção separada ao final, "
-        "precedida por '---\\n> **Nota de rodapé:**', sem reutilizar a "
-        "numeração [N] das referências bibliográficas."
-    )
+    config = get_runtime()
+    page_offset = (config.page_range[0] - 1) if config.page_range else 0
 
     markdown_partes = []
     total = len(pages)
@@ -210,13 +206,17 @@ def extract_long_document(pdf_path: str | Path) -> str:
         ),
         start=1,
     ):
-        texto_pagina = _run_inference(
-            page_bytes,
-            prompt_pagina,
-            max_new_tokens=2048,
-            desc=f"Página {i}/{total}",
+        pdf_page = page_offset + i
+        texto_pagina = normalize_longdoc_page(
+            _run_inference(
+                page_bytes,
+                LONGDOC_PAGE_PROMPT,
+                max_new_tokens=LONGDOC_MAX_NEW_TOKENS,
+                num_ctx=LONGDOC_NUM_CTX,
+                desc=f"Página {pdf_page} ({i}/{total})",
+            )
         )
-        markdown_partes.append(f"<!-- página {i} -->\n{texto_pagina}")
+        markdown_partes.append(f"<!-- página {pdf_page} -->\n{texto_pagina}")
 
     return "\n\n".join(markdown_partes)
 

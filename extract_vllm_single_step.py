@@ -37,6 +37,7 @@ import requests
 from config import (
     DEFAULT_DOCS,
     DEFAULT_OUTPUTS,
+    LONGDOC_MAX_NEW_TOKENS,
     OUTPUTS_DIR,
     MODEL_7B_AWQ,
     RuntimeConfig,
@@ -44,19 +45,10 @@ from config import (
     resolve_doc,
     runtime_from_args,
 )
-from schemas import CNH_SCHEMA, FATURA_ENERGIA_SCHEMA, FATURA_EXTRACTION_PROMPT
+from schemas import CNH_SCHEMA, FATURA_ENERGIA_SCHEMA, FATURA_EXTRACTION_PROMPT, LONGDOC_PAGE_PROMPT, normalize_longdoc_page
 
 VLLM_URL = os.getenv("VLLM_URL", "http://localhost:8000/v1/chat/completions")
 DEFAULT_MODEL = os.getenv("QWEN_MODEL_ID", MODEL_7B_AWQ)
-
-LONGDOC_PROMPT = (
-    "Transcreva o conteúdo textual desta página mantendo a organização "
-    "do layout (títulos, parágrafos e, principalmente, tabelas) em "
-    "formato Markdown. Tabelas devem virar tabelas Markdown. "
-    "Se houver gráficos, diagramas ou imagens não-textuais, descreva "
-    "objetivamente o que eles mostram em uma seção "
-    "'> **Figura:** ...' imediatamente após o ponto onde aparecem."
-)
 
 
 def _mime_for_path(path: Path) -> str:
@@ -157,18 +149,22 @@ def extract_long_document(
 ) -> str:
     config = config or RuntimeConfig()
     pages = _load_pages(pdf_path, config)
+    page_offset = (config.page_range[0] - 1) if config.page_range else 0
 
     markdown_partes = []
     for i, (_, page_bytes, mime) in enumerate(pages, start=1):
+        pdf_page = page_offset + i
         data_url = _encode_image_bytes(page_bytes, mime)
-        texto = _chat_completion(
-            model=model,
-            instrucao=LONGDOC_PROMPT,
-            image_data_url=data_url,
-            guided_json=None,
-            max_tokens=2048,
+        texto = normalize_longdoc_page(
+            _chat_completion(
+                model=model,
+                instrucao=LONGDOC_PAGE_PROMPT,
+                image_data_url=data_url,
+                guided_json=None,
+                max_tokens=LONGDOC_MAX_NEW_TOKENS,
+            )
         )
-        markdown_partes.append(f"<!-- página {i} -->\n{texto}")
+        markdown_partes.append(f"<!-- página {pdf_page} -->\n{texto}")
 
     return "\n\n".join(markdown_partes)
 
